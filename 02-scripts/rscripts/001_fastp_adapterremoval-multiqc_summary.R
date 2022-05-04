@@ -41,8 +41,8 @@ gs_summary[["leeHOM"]] <- general_stats[["leeHOM"]] %>%
          settings = str_split_fixed(Sample, " \\| ", n=5)[,4]) %>%
   separate(settings, c("rlength", "damage", "collapsed"), sep = "_|-") %>%
   mutate(collapsed = collapsed == "collapse",
-         seqtype = if_else(str_detect(Sample, "collapsed") | str_detect(Sample, "singleton"),
-                           "SE", "PE")) %>%
+         seqtype = if_else(str_detect(Sample, "_r"),
+                           "PE", "SE")) %>%
   filter(!str_detect(Sample, "_r2")) %>%
   select(program:collapsed, seqtype,
          avg_length = `FastQC_mqc-generalstats-fastqc-avg_sequence_length`,
