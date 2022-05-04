@@ -1,0 +1,69 @@
+
+@misc{Andrews2010,
+  title = {{{FastQC}}: A Quality Control Tool for High Throughput Sequence Data},
+  author = {Andrews, Simon and others},
+  year = {2010},
+  publisher = {{Babraham Bioinformatics, Babraham Institute, Cambridge, United Kingdom}}
+}
+
+@article{Chen2018,
+  title = {Fastp: An Ultra-Fast All-in-One {{FASTQ}} Preprocessor},
+  shorttitle = {Fastp},
+  author = {Chen, Shifu and Zhou, Yanqing and Chen, Yaru and Gu, Jia},
+  year = {2018},
+  month = sep,
+  journal = {Bioinformatics},
+  volume = {34},
+  number = {17},
+  pages = {i884-i890},
+  issn = {1367-4803},
+  doi = {10.1093/bioinformatics/bty560},
+  abstract = {Quality control and preprocessing of FASTQ files are essential to providing clean data for downstream analysis. Traditionally, a different tool is used for each operation, such as quality control, adapter trimming and quality filtering. These tools are often insufficiently fast as most are developed using high-level programming languages (e.g. Python and Java) and provide limited multi-threading support. Reading and loading data multiple times also renders preprocessing slow and I/O inefficient.We developed fastp as an ultra-fast FASTQ preprocessor with useful quality control and data-filtering features. It can perform quality control, adapter trimming, quality filtering, per-read quality pruning and many other operations with a single scan of the FASTQ data. This tool is developed in C++ and has multi-threading support. Based on our evaluation, fastp is 2\textendash 5 times faster than other FASTQ preprocessing tools such as Trimmomatic or Cutadapt despite performing far more operations than similar tools.The open-source code and corresponding instructions are available at https://github.com/OpenGene/fastp.}
+}
+
+@article{Ewels2016,
+  title = {{{MultiQC}}: Summarize Analysis Results for Multiple Tools and Samples in a Single Report},
+  shorttitle = {{{MultiQC}}},
+  author = {Ewels, Philip and Magnusson, M{\aa}ns and Lundin, Sverker and K{\"a}ller, Max},
+  year = {2016},
+  month = oct,
+  journal = {Bioinformatics},
+  volume = {32},
+  number = {19},
+  pages = {3047--3048},
+  issn = {1367-4803},
+  doi = {10.1093/bioinformatics/btw354},
+  abstract = {Motivation: Fast and accurate quality control is essential for studies involving next-generation sequencing data. Whilst numerous tools exist to quantify QC metrics, there is no common approach to flexibly integrate these across tools and large sample sets. Assessing analysis results across an entire project can be time consuming and error prone; batch effects and outlier samples can easily be missed in the early stages of analysis.Results: We present MultiQC, a tool to create a single report visualising output from multiple tools across many samples, enabling global trends and biases to be quickly identified. MultiQC can plot data from many common bioinformatics tools and is built to allow easy extension and customization.Availability and implementation: MultiQC is available with an GNU GPLv3 license on GitHub, the Python Package Index and Bioconda. Documentation and example reports are available at http://multiqc.infoContact:phil.ewels@scilifelab.se}
+}
+
+@article{RenaudLeeHOM2014,
+  title = {{{leeHom}}: Adaptor Trimming and Merging for {{Illumina}} Sequencing Reads},
+  shorttitle = {{{leeHom}}},
+  author = {Renaud, Gabriel and Stenzel, Udo and Kelso, Janet},
+  year = {2014},
+  month = oct,
+  journal = {Nucleic Acids Research},
+  volume = {42},
+  number = {18},
+  pages = {e141},
+  issn = {0305-1048},
+  doi = {10.1093/nar/gku699},
+  abstract = {The sequencing of libraries containing molecules shorter than the read length, such as in ancient or forensic applications, may result in the production of reads that include the adaptor, and in paired reads that overlap one another. Challenges for the processing of such reads are the accurate identification of the adaptor sequence and accurate reconstruction of the original sequence most likely to have given rise to the observed read(s). We introduce an algorithm that removes the adaptors and reconstructs the original DNA sequences using a Bayesian maximum a posteriori probability approach. Our algorithm is faster, and provides a more accurate reconstruction of the original sequence for both simulated and ancient DNA data sets, than other approaches. leeHom is released under the GPLv3 and is freely available from: https://bioinf.eva.mpg.de/leehom/}
+}
+
+@article{Schubert2016,
+  title = {{{AdapterRemoval}} v2: Rapid Adapter Trimming, Identification, and Read Merging},
+  shorttitle = {{{AdapterRemoval}} V2},
+  author = {Schubert, Mikkel and Lindgreen, Stinus and Orlando, Ludovic},
+  year = {2016},
+  month = feb,
+  journal = {BMC Research Notes},
+  volume = {9},
+  number = {1},
+  pages = {88},
+  issn = {1756-0500},
+  doi = {10.1186/s13104-016-1900-2},
+  abstract = {As high-throughput sequencing platforms produce longer and longer reads, sequences generated from short inserts, such as those obtained from fossil and degraded material, are increasingly expected to contain adapter sequences. Efficient adapter trimming algorithms are also needed to process the growing amount of data generated per sequencing run.}
+}
+
+
