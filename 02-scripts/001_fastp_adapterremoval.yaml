@@ -1,0 +1,17 @@
+name: 001_fastp_adapterremoval
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - fastp=0.23.2
+  - adapterremoval=2.3.2
+  - leehom=1.2.15
+  - fastqc
+  - multiqc
+  - r-base=4.1
+  - r-data.table
+  - r-dplyr
+  - r-tidyr
+  - r-stringr
+  - r-purrr
