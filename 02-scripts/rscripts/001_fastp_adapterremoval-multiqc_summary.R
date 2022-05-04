@@ -87,8 +87,8 @@ fqc_summary[["leeHOM"]] <- fastqc[["leeHOM"]] %>%
          settings = str_split_fixed(Sample, " \\| ", n=5)[,4]) %>%
   separate(settings, c("rlength", "damage", "collapsed"), sep = "_|-") %>%
   mutate(collapsed = collapsed == "collapse",
-         seqtype = if_else(str_detect(Sample, "collapsed") | str_detect(Sample, "singleton"),
-                           "SE", "PE")) %>%
+         seqtype = if_else(str_detect(Sample, "_r"),
+                           "PE", "SE")) %>%
   select(program:collapsed, seqtype,
          per_base_sequence_content, overrepresented_sequences, adapter_content) %>%
   mutate(across(per_base_sequence_content:adapter_content, factor, levels = c("pass", "warn", "fail")))
