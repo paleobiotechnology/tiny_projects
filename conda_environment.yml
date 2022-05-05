@@ -1,0 +1,9 @@
+name: tiny_projects
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - conda-forge::python=3.9.4
+  - conda-forge::snakemake>7
+  - conda-forge::r-base=4.1.1

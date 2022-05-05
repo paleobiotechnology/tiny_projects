@@ -47,7 +47,7 @@ rule adapterremoval_summary:
         dir = "04-analysis/001_fastp_adapterremoval/adapterremoval"
     shell:
         """
-        find {params.dir} -mindepth 1 \( ! -name "*.log" -and ! -name "*.done" \) -exec rm {{}} +
+        find {params.dir} -mindepth 1 -maxdepth 1 -type f \( ! -name "*.log" -and ! -name "*.done" \) -exec rm {{}} +
         """
 
 rule adapterremoval:
