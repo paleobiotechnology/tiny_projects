@@ -41,7 +41,7 @@ A [snakemake pipeline](https://github.com/paleobiotechnology/tiny_projects/commi
 was used to run each tool with each dataset. For reference, the commands executed for each tool can 
 be seen below.
 
-```{bash}
+```{bash, eval = F}
 ## AdapterRemoval
 AdapterRemoval --basename {params.prefix} \
                    --file1 {params.pe1} \
@@ -93,10 +93,10 @@ To evaluate the performance of the different tools, I made use of a previously s
 calculus as either commensals or contaminants. The samples differed in average DNA molecule length 
 (short, medium, long) and amount of observed ancient DNA damage (none, light, heavy). 
 
-I tested each of the three programs across these nine samples on default settings, 
-enabling or disabling the collapse of overlapping read pairs, respectively. I summarised the 
-performance of the adapter removal using FastQC [@Andrews2010] and summarised all reports into 
-summary tables using MultiQC [@Ewels2016].
+I tested each of the three programs across these nine samples on default or established 
+aDNA-specific settings, enabling or disabling the collapse of overlapping read pairs, respectively.
+I summarised the performance of the adapter removal using FastQC [@Andrews2010] and summarised all 
+reports into summary tables using MultiQC [@Ewels2016].
 
 ```{r libraries, echo = F}
 library(knitr)
@@ -192,7 +192,7 @@ data exported by all three programs passed the adapter content test of FastQC. H
 read pairs that could not be overlapped we observed differences between the programs. While fastp
 had no adapter sequence motifs in the remaining paired data independent of the underlying DNA
 molecule length distribution, we observed issues for both AdapterRemoval2 and leeHOM, with the data
-ith either medium or short read length distribution.
+with either medium or short read length distribution.
 
 ```{r fastqc_adaptercontent_se}
 fastqc_summary %>%

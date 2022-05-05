@@ -4,6 +4,7 @@ merged reads?
 Alex Huebner
 May 05, 2022
 
+-   [Methods](#methods)
 -   [Results](#results)
     -   [Efficiency to remove adapter
         sequences](#efficiency-to-remove-adapter-sequences)
@@ -45,6 +46,59 @@ compare the three programs, AdapterRemoval2, leeHOM, and fastp with each
 other on a simulated set of sequencing data with variation in the amount
 of ancient DNA damage and average DNA molecule length.
 
+# Methods
+
+A [snakemake
+pipeline](https://github.com/paleobiotechnology/tiny_projects/commit/ac19265c504c146303b13ff287394c49913d795d)
+was used to run each tool with each dataset. For reference, the commands
+executed for each tool can be seen below.
+
+``` bash
+## AdapterRemoval
+AdapterRemoval --basename {params.prefix} \
+                   --file1 {params.pe1} \
+                   --file2 {params.pe2} \
+                   --trimns \
+                   --trimqualities \
+                   --minquality 20 \
+                   --minlength 30 \
+                   --threads {threads} \
+                   --qualitybase 33 \
+                   --adapter1 {params.forward_adapter} \
+                   --adapter2 {params.reverse_adapter} \
+                   {params.collapse} \
+                   --settings {log}
+## LeeHOM
+leeHom -f {params.forward_adapter} \
+       -s {params.reverse_adapter} \
+       -t {threads} \
+       -fq1 {params.pe1} \
+       -fq2 {params.pe2} \
+       -fqo {params.prefix} \
+       --log {log} \
+       {params.collapse}
+               
+## fastp
+fastp --in1 {params.pe1} \
+      --in2 {params.pe2} \
+      --out1 {params.prefix}_1.fastq.gz \
+      --out2 {params.prefix}_2.fastq.gz \
+      {params.collapse} \
+      --compression 4 \
+      --adapter_sequence {params.forward_adapter} \
+      --adapter_sequence_r2 {params.reverse_adapter} \
+      --trim_poly_g \
+      --json {log} \
+      --html /dev/null
+```
+
+Where `params.collapse` provides the corresponding option to turn on
+read-merging for each tool.
+
+Additional parameters for AdapterRemoval2 represent commonly used
+parameters in ancient DNA, in particular used in the pipeline
+[nf-core/eager](https://nf-co.re/eager).
+
 # Results
 
 To evaluate the performance of the different tools, I made use of a
@@ -57,10 +111,11 @@ or contaminants. The samples differed in average DNA molecule length
 light, heavy).
 
 I tested each of the three programs across these nine samples on default
-settings, enabling or disabling the collapse of overlapping read pairs,
-respectively. I summarised the performance of the adapter removal using
-FastQC (Andrews and others 2010) and summarised all reports into summary
-tables using MultiQC (Ewels et al. 2016).
+or established aDNA-specific settings, enabling or disabling the
+collapse of overlapping read pairs, respectively. I summarised the
+performance of the adapter removal using FastQC (Andrews and others
+2010) and summarised all reports into summary tables using MultiQC
+(Ewels et al. 2016).
 
     ## ── Attaching packages ─────────────────────────────────────── tidyverse 1.3.1 ──
 
@@ -128,7 +183,7 @@ that could not be overlapped we observed differences between the
 programs. While fastp had no adapter sequence motifs in the remaining
 paired data independent of the underlying DNA molecule length
 distribution, we observed issues for both AdapterRemoval2 and leeHOM,
-with the data ith either medium or short read length distribution.
+with the data with either medium or short read length distribution.
 
 ![](fastp_adapterremoval_files/figure-gfm/fastqc_adaptercontent_se-1.png)<!-- -->
 
@@ -166,13 +221,13 @@ overlapping paired reads.
 The behaviour of merging of overlapping read pairs can usually be
 influenced by specifying the required overlap of the two paired reads.
 By default, fastp requires an overlap of 30 bp, AdapterRemoval2 of 11
-bp, and for leeHOM this parameter is not accessible via the commandline.
-The effect of this can be observed when comparing the fraction of merged
-read pairs per program (**Figure 3**). AdapterRemoval2 had the highest
-fraction of successfully merge reads, followed by leeHOM and fastp,
-however, the differences were relatively small, particularly for the
-samples simulated from a medium or short DNA molecule length
-distribution.
+bp, and for leeHOM this parameter is not accessible via the
+command-line. The effect of this can be observed when comparing the
+fraction of merged read pairs per program (**Figure 3**).
+AdapterRemoval2 had the highest fraction of successfully merge reads,
+followed by leeHOM and fastp, however, the differences were relatively
+small, particularly for the samples simulated from a medium or short DNA
+molecule length distribution.
 
 ![](fastp_adapterremoval_files/figure-gfm/fraction_merged-1.png)<!-- -->
 
