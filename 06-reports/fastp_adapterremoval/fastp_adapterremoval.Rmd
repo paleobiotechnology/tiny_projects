@@ -10,7 +10,7 @@ output:
 bibliography: fastp_adapterremoval.bib
 ---
 
-The trimming of adapter sequences is an important the first step of processing Illumina sequencing
+The trimming of adapter sequences is an important first step of processing Illumina sequencing
 data, to ensure clean data for subsequent analyses. Due to the short length of an average DNA
 molecule, paired-end sequencing of ancient DNA often leads to an either complete or partial overlap
 of the mate sequences. Therefore, specialised adapter removal tools, such as AdapterRemoval2 (AR2;
@@ -29,7 +29,7 @@ additional tools, such as _N_ trimming to _in silico_ remove 'damage' from ends 
 or complexity filtering to remove reads with low sequence diversity reads that provide little 
 information during metagenomic alignment and slow computational time. 
 
-Therefore, the question arose whether it would be necessary to still  run the specialised adapter
+Therefore, the question arose whether it would be necessary to still run the specialised adapter
 removal programs or whether fastp can replace these and save additional processing step(s). In the
 following, I will compare the three programs, AdapterRemoval2, leeHOM, and fastp with each other on
 a simulated set of sequencing data with variation in the amount of ancient DNA damage and average
@@ -88,7 +88,7 @@ particular used in the pipeline [nf-core/eager](https://nf-co.re/eager).
 # Results
 
 To evaluate the performance of the different tools, I made use of a previously simulated dataset
-(for details see https://github.com/alexhbnr/effect_aDNAdamage_denovoassembly) that consisted of 
+(for details see https://github.com/alexhbnr/aDNA-DenovoAssembly) that consisted of 
 50 million DNA sequences that were generated from 30 microbial species commonly found in dental 
 calculus as either commensals or contaminants. The samples differed in average DNA molecule length 
 (short, medium, long) and amount of observed ancient DNA damage (none, light, heavy). 
