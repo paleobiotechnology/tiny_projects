@@ -10,69 +10,126 @@ output:
 bibliography: fastp_adapterremoval.bib
 ---
 
-The trimming of adapter sequences is the first step of processing Illumina sequencing data that is
-required to obtain clean data for subsequent analyses. Due to the short average DNA molecule length,
-paired-end sequencing of ancient DNA leads to an either complete or partial overlap of the mate
-sequences. Therefore, specialised adapter removal tools, such as AdapterRemoval2 (AR2;
+The trimming of adapter sequences is an important first step of processing Illumina sequencing
+data, to ensure clean data for subsequent analyses. Due to the short length of an average DNA
+molecule, paired-end sequencing of ancient DNA often leads to an either complete or partial overlap
+of the mate sequences. Therefore, specialised adapter removal tools, such as AdapterRemoval2 (AR2;
 @Schubert2016) or leeHOM [@RenaudLeeHOM2014] were developed to allow the merging of these read pairs
-into a single sequence and became the de-facto standard in the ancient DNA field.
+into a single sequence and tools with such functionality have become the de-facto standard in the 
+ancient DNA field.
 
 Both these programs operate on FastQ files. Due to the recent change in the sequence chemistry of
 the Illumina sequencers, which introduced poly-G strings at the end of short DNA sequences, an
 additional processing step is required to remove these artefacts from the actual biological
-sequences. The tool that is commonly applied for this step is fastp [@Chen2018] and is a very fast,
-general purpose FastQ file manipulation tool. In a recent version, the authors added the option to
-trim adapter sequences and merge overlapping read pairs, too. Therefore, the question arose whether
-it would be necessary to still run the specialised adapter removal programs or whether fastp can
-replace these and save an additional processing step.
+sequences. A tool that is commonly applied for this step is fastp [@Chen2018] and is a very fast,
+general purpose FastQ file manipulation tool. In a recent version, the authors added the option to 
+trim adapter sequences and merge overlapping read pairs, too. In addition, fastp offers a suite of
+extra functionality useful for ancient DNA data, that are routinely run by researchers using other
+additional tools, such as _N_ trimming to _in silico_ remove 'damage' from ends of reads,
+or complexity filtering to remove reads with low sequence diversity reads that provide little 
+information during metagenomic alignment and slow computational time. 
 
-In the following, I will compare the three programs, AdapterRemoval2, leeHOM, and fastp, with each
-other on a simulated set of sequencing data that varied regarding the amount of ancient DNA damage
-and the average DNA molecule length.
+Therefore, the question arose whether it would be necessary to still run the specialised adapter
+removal programs or whether fastp can replace these and save additional processing step(s). In the
+following, I will compare the three programs, AdapterRemoval2, leeHOM, and fastp with each other on
+a simulated set of sequencing data with variation in the amount of ancient DNA damage and average
+DNA molecule length.
+
+# Methods
+
+A [snakemake pipeline](https://github.com/paleobiotechnology/tiny_projects/commit/ac19265c504c146303b13ff287394c49913d795d) 
+was used to run each tool with each dataset. For reference, the commands executed for each tool can 
+be seen below.
+
+```{bash, eval = F}
+## AdapterRemoval
+AdapterRemoval --basename {params.prefix} \
+                   --file1 {params.pe1} \
+                   --file2 {params.pe2} \
+                   --trimns \
+                   --trimqualities \
+                   --minquality 20 \
+                   --minlength 30 \
+                   --threads {threads} \
+                   --qualitybase 33 \
+                   --adapter1 {params.forward_adapter} \
+                   --adapter2 {params.reverse_adapter} \
+                   {params.collapse} \
+                   --settings {log}
+## LeeHOM
+leeHom -f {params.forward_adapter} \
+       -s {params.reverse_adapter} \
+       -t {threads} \
+       -fq1 {params.pe1} \
+       -fq2 {params.pe2} \
+       -fqo {params.prefix} \
+       --log {log} \
+       {params.collapse}
+               
+## fastp
+fastp --in1 {params.pe1} \
+      --in2 {params.pe2} \
+      --out1 {params.prefix}_1.fastq.gz \
+      --out2 {params.prefix}_2.fastq.gz \
+      {params.collapse} \
+      --compression 4 \
+      --adapter_sequence {params.forward_adapter} \
+      --adapter_sequence_r2 {params.reverse_adapter} \
+      --trim_poly_g \
+      --json {log} \
+      --html /dev/null
+```
+
+Where `params.collapse` provides the corresponding option to turn on read-merging for each tool.
+
+Additional parameters for AdapterRemoval2 represent commonly used parameters in ancient DNA, in
+particular used in the pipeline [nf-core/eager](https://nf-co.re/eager).
 
 # Results
 
 To evaluate the performance of the different tools, I made use of a previously simulated dataset
-(for details see http://github.com/alexhnr/aDNA-DenovoAssembly) that consisted out of 50 million DNA
-sequences that were generated from 30 microbial species commonly found in dental calculus as either
-commensals or contaminants. The samples differed in average DNA molecule length (short, medium,
-long) and amount of observed ancient DNA damage (none, light, heavy). Therefore, I tested each of
-the three programs across these nine samples using the default settings, enabling or disabling the
-collapse of overlapping read pairs, respectively. I summarised the performance of the adapter
-removal using FastQC [@Andrews2010] and summarised all reports into summary tables using multiQC
-[@Ewels2016].
+(for details see https://github.com/alexhbnr/aDNA-DenovoAssembly) that consisted of 
+50 million DNA sequences that were generated from 30 microbial species commonly found in dental 
+calculus as either commensals or contaminants. The samples differed in average DNA molecule length 
+(short, medium, long) and amount of observed ancient DNA damage (none, light, heavy). 
 
-```{r libraries, echo=F}
+I tested each of the three programs across these nine samples on default or established 
+aDNA-specific settings, enabling or disabling the collapse of overlapping read pairs, respectively.
+I summarised the performance of the adapter removal using FastQC [@Andrews2010] and summarised all 
+reports into summary tables using MultiQC [@Ewels2016].
+
+```{r libraries, echo = F}
 library(knitr)
 library(rmarkdown)
 library(data.table)
 library(tidyverse)
 library(pander)
 library(patchwork)
-opts_chunk$set(echo=F, warning=F, message=F, dpi=150)
+opts_chunk$set(echo = F, warning = F, message = F, dpi = 150)
 theme_set(theme_classic(base_size = 10))
 ```
 
 ```{r load_data}
 # General stats
-#general_stats <- fread("../../05-results/")
-general_stats <- fread("./001_fastp_adapterremoval-general_stats.tsv")
+general_stats <- fread("../../05-results/001_fastp_adapterremoval-general_stats.tsv")
+#general_stats <- fread("./001_fastp_adapterremoval-general_stats.tsv")
 # FastQC
-#fastqc <- fread("../../05-results/")
-fastqc <- fread("./001_fastp_adapterremoval-fastqc.tsv")
+fastqc <- fread("../../05-results/001_fastp_adapterremoval-fastqc.tsv")
+#fastqc <- fread("./001_fastp_adapterremoval-fastqc.tsv")
 ```
 
 ## Efficiency to remove adapter sequences
 
-First and for most, the importance of the adapter removal step is to remove the technical adapter
-sequences from the sequencing data because they might interfere with the analysis of the biological
-signal in these data. Therefore, I first evaluated whether the softwares could remove the adapter
-sequences efficiently and no overrepresented adapter sequences were observed in the data. For this,
-I used FastQC [@Andrews2010] and summarised it using multiQC [@Ewels2016].
+First and foremost, the importance of the adapter removal step is to remove technical adapter
+sequences from the sequencing data as they may interfere with the analysis of the biological
+signal in these data. Therefore, I first evaluated how well the different software remove adapter
+sequences efficiently, and whether overrepresented adapter sequences were observed in the data.
 
 ```{r summarise_fastqc}
 fastqc_summary <- fastqc %>%
-  pivot_longer(per_base_sequence_content:adapter_content, names_to = "measure", values_to = "quality_score") %>%
+  pivot_longer(per_base_sequence_content:adapter_content,
+               names_to = "measure",
+               values_to = "quality_score") %>%
   group_by(across(-c(quality_score))) %>%
   mutate(total = n()) %>%
   group_by(across(-c(total))) %>%
@@ -87,21 +144,24 @@ fastqc_summary <- fastqc %>%
 ```
 
 The first metric to evaluate is whether the respective sequencing data of the samples still contains
-sequences that are likely Illumina adapter sequences. FastQC iterates over the sequencing data
-searching for such sequence motifs and reports a sample either as pass, warn, or fail. Since FastQC
-is running its analyses per sequencing data file, I further summarised this metric across all output
-files of a sample.
+sequences that are likely derived from Illumina adapter sequences. FastQC iterates over the 
+sequencing data searching for such sequence motifs and reports a sample either as pass, warn, or 
+fail. Since FastQC is running its analyses per sequencing data file, I further summarised this 
+metric across all output files of a sample.
 
-I compared the results when either without (**Figure 1**) or with (**Figure 2**) the merging of
-overlapping read pairs. Without merging the read pairs, both AdapterRemoval2 and fastp returned one
-output file per input file (in total two files), while leeHOM additionally created a single-end file
-in case only one mate of the read pairs passed the required quality. For all nine samples, both
-AdapterRemoval2 and fastp managed to pass the adapter content test of FastQC, i.e. no adapter
-sequence motifs were observed. For leeHOM, there were no adapter sequencing motifs observed in the
-singleton data but the forward mate of the read pairs failed the test when the underlying DNA
-molecule length distribution was short. Such a DNA molecule length distribution is characteristic
-for poorly preserved ancient DNA samples and is particularly worrying, when planning to use leeHOM
-to remove adapter sequences prior to assembly.
+I compared the results when either with (**Figure 2**) or without (**Figure 1**) merging of
+overlapping read pairs was performed. Without merging the read pairs, by default both 
+AdapterRemoval2 and fastp returned one output file per input file (in total two files), while 
+leeHOM additionally created a single-end file in case only one mate of the read pairs passed the 
+required quality. 
+
+For all nine samples, under default parameters, both AdapterRemoval2 and fastp managed to pass the 
+adapter content test of FastQC, i.e. no adapter sequence motifs were observed. For leeHOM, there 
+were no adapter sequencing motifs observed in the singleton data but the forward mate of the read 
+pairs failed the test when the underlying DNA molecule length distribution was short. Such a DNA 
+molecule length distribution is characteristic for poorly preserved ancient DNA samples and is 
+particularly worrying, when planning to use leeHOM to remove adapter sequences, particular prior to
+_de novo_ assembly.
 
 ```{r fastqc_adaptercontent_pe}
 fastqc_summary %>%
@@ -116,7 +176,7 @@ facet_grid(rlength ~ damage) +
 labs(x = "program and the sequencing type of the output data",
      y = "fraction of FastQ files",
      fill = "quality score") +
-scale_y_continuous(label = scales::percent_format()) +
+scale_y_continuous(labels = scales::percent_format()) +
 scale_fill_manual(values = c("#FF4500", "#008000")) +
 theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 ```
@@ -127,12 +187,12 @@ fraction of FastQ files was dependent on the number of files reported per progra
 AdapterRemoval2 and fastp exported each one file per read mate, while leeHOM exported additionally
 singleton for which one of the read mates did not fulfil the quality criteria.
 
-When enabling the merging of overlapping reads, the overlapping and subsequently merged sequencing
+When enabling merging of overlapping reads, the overlapping and subsequently merged sequencing
 data exported by all three programs passed the adapter content test of FastQC. However, for the
 read pairs that could not be overlapped we observed differences between the programs. While fastp
 had no adapter sequence motifs in the remaining paired data independent of the underlying DNA
-molecule length distribution, we observed issues for both AdapterRemoval2 and leeHOM, when we had
-either medium or short read length distribution.
+molecule length distribution, we observed issues for both AdapterRemoval2 and leeHOM, with the data
+with either medium or short read length distribution.
 
 ```{r fastqc_adaptercontent_se}
 fastqc_summary %>%
@@ -149,7 +209,7 @@ facet_grid(rlength ~ damage) +
 labs(x = "program and the sequencing type of the output data",
      y = "fraction of FastQ files",
      fill = "quality score") +
-scale_y_continuous(label = scales::percent_format()) +
+scale_y_continuous(labels = scales::percent_format()) +
 scale_fill_manual(values = c("#008000", "#FFD700", "#FF4500")) +
 theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 ```
@@ -158,14 +218,14 @@ theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 motifs in the sequencing data after the adapter removal with merging overlapping reads.** The
 fraction of FastQ files was dependent on the number of files reported per program.
 
-Neither program retained any other overrepresented sequences and all three programs raised either
-warnings or even failed the per-base sequence content test of FastQC, when the underlying DNA
+None of the programs retained any other overrepresented sequences and all three programs raised 
+either warnings or even failed the per-base sequence content test of FastQC, when the underlying DNA
 molecule distribution was short, suggesting that this is rather a problem with the underlying FastQC
 test rather than something that these programs influenced.
 
 In summary, fastp performed the most consistent across all data sets regarding the removal of
-adapter sequences. While AdapterRemoval2 only seemed to have issues regarding removing adapters in
-non-overlapping sequence pairs when the DNA molecule length distribution was shorter, leeHOM seemed
+adapter sequences. AdapterRemoval2 only seemed to have issues regarding removing adapters in
+non-merged sequence pairs when the DNA molecule length distribution was shorter, leeHOM seemed
 to suffer in general with removing adapter sequences in sequences that were not merged into a single
 one.
 
@@ -174,17 +234,18 @@ one.
 Ancient DNA molecules can be characterised by their on-average short length that often is shorter
 than the nominal sequencing length of the sequencing kit. For such cases, the sequences obtained
 from paired-end sequencing overlap in the middle and can be merged into a single, longer DNA
-molecule sequence. This is commonly performed for all type of analyses with the exception of *de
-novo* assembly, which either requires or strongly benefits from paired-end sequencing data.
-Therefore, I additionally will evaluate the performance of merging overlapping paired reads.
+molecule sequence. This is commonly performed for all type of analyses in ancient DNA with the 
+exception of _de novo_ assembly, which either requires or strongly benefits from paired-end 
+sequencing data. Therefore, I additionally will evaluate the performance of merging overlapping 
+paired reads.
 
 The behaviour of merging of overlapping read pairs can usually be influenced by specifying the
 required overlap of the two paired reads. By default, fastp requires an overlap of 30 bp,
-AdapterRemoval2 of 11 bp, and for leeHOM this parameter is not accessible via the commandline. The
+AdapterRemoval2 of 11 bp, and for leeHOM this parameter is not accessible via the command-line. The
 effect of this can be observed when comparing the fraction of merged read pairs per program
-(**Figure 3**). AdapterRemoval2 had the highest fraction, followed by leeHOM and fastp, however, the
-differences were relatively small, particularly for the samples simulated from a medium or short DNA
-molecule length distribution.
+(**Figure 3**). AdapterRemoval2 had the highest fraction of successfully merge reads, followed by 
+leeHOM and fastp, however, the differences were relatively small, particularly for the samples 
+simulated from a medium or short DNA molecule length distribution.
 
 ```{r fraction_merged}
 general_stats %>%
@@ -200,7 +261,7 @@ geom_col(position = position_stack()) +
 facet_grid(rlength ~ damage) +
 labs(y = "fraction of sequencing data type",
      fill = "sequencing data type") +
-scale_y_continuous(label = scales::percent_format()) +
+scale_y_continuous(labels = scales::percent_format()) +
 scale_fill_discrete(label = c("merged", "non-merged")) +
 theme(legend.position = "top")
 ```
@@ -210,8 +271,9 @@ theme(legend.position = "top")
 However, while the number of merged read pairs was highest for AdapterRemoval2, the average read
 length of the merged molecules was much shorter than leeHOM and fastp, which returned almost
 identical sequencing length (**Figure 4**). This suggests that enabling the quality trimming options
-`--trimns --trimqualities` that we enable by default substantially trimmed the read pairs while the
-other two programs do not perform such extensive quality trimming by default.
+`--trimns --trimqualities` of AdapterRemoval2, that we enable by default in many ancient DNA 
+projects, substantially trimmed the read pairs while the other two programs do not perform such 
+extensive quality trimming by default.
 
 ```{r avg_length}
 general_stats %>%
@@ -223,7 +285,7 @@ ggplot(aes(x = program, y = avg_length)) +
 geom_col() +
 facet_grid(rlength ~ damage) +
 labs(y = "average read length [bp]") +
-scale_y_continuous(label = scales::percent_format()) +
+scale_y_continuous(labels = scales::percent_format()) +
 theme(legend.position = "top")
 ```
 
@@ -235,10 +297,15 @@ To evaluate whether the program fastp is a suitable alternative for trimming Ill
 sequences from sequencing data, I compared it to two standard adapter removal tools, AdapterRemoval2
 and leeHOM. I selected a set of simulated sequencing data with different characteristics regarding
 the DNA molecule length and the amount of ancient DNA damage and ran all programs with parameters
-commonly used in the field of ancient DNA. Fastp was able to remove adapter sequences efficiently
-and it was the only program that could remove all adapter sequence motifs and could thus pass the
-adapter content test of FastQC. Furthermore, it is able to efficiently merge overlapping read pairs
-into a single sequence. Overall, it could therefore be used to replace the dedicated adapter
-trimming tools, AdapterRemoval2 and leeHOM, because it provides an efficient alternative to them.
+commonly used in the field of ancient DNA. 
+
+fastp was able to remove adapter sequences efficiently and it was the only program that could remove
+all adapter sequence motifs across all datasets and could thus pass the adapter content test of 
+FastQC. Furthermore, it is able to efficiently merge overlapping read pairs into a single sequence,
+and likely with comparative results to AdapterRemoval2 with tweaking of parameters.
+
+Overall, due fastp's efficiency and the additional in-built functionality provided, the analyses 
+presented here suggest that it could be used to replace the dedicated adapter trimming tools, 
+AdapterRemoval2 and leeHOM.
 
 # References

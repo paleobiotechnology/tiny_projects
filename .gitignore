@@ -1,3 +1,5 @@
 .snakemake/
 conda/
 snakemake_tmp/
+.Rproj.user
+.Rproj
