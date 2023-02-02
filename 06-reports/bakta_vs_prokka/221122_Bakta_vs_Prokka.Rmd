@@ -1,0 +1,52 @@
+---
+title: "Comparison between Bakta and Prokka for the automatic annotation of prokaryotic genomes"
+author: "Alex Huebner"
+date: "`r format(Sys.time(), '%b %d, %Y')`"
+output:
+    github_document:
+        fig_width: 8
+        fig_height: 6
+        toc: true
+bibliography: ./221122_Bakta_vs_Prokka.bib
+---
+
+In the past ten years, there has been a huge increase in the number of metagenome-assembled genomes
+(MAGs) due to improvement in *de novo* assembly tools, such as MEGAHIT [@Li2015] and metaSPAdes
+[@Nurk2017], and the decreasing costs for Illumina short-reads sequencing. Many of the
+pipelines available for *de novo* assembly of short-read sequencing data and subsequent binning of
+the yielded contigs, e.g. nf-core/mag [@Krakau2022] or ATLAS [@Kieser2020], are using the software
+Prokka [@SeemanProkka2014] to rapidly annotate the MAGs. 
+
+Due to its functionality, Prokka has become the de facto standard for this type of bacterial genome
+annotation. However, it has been developed further in the last years and recently the author of
+Prokka, Torsten Seeman, recommended on [Twitter](https://twitter.com/torstenseemann/status/1565471892840259585?s=20&t=SgsPvhR6e09ByVdXs5PIGg)
+to use Bakta [@Schwengers2021] as a successor of Prokka.
+
+In contrast to Prokka, Bakta aims to increase the ability to assign the newly annotated coding
+sequences to genes that are available in reference databases and to improve the export of the
+annotations, e.g. by using JSON files. The authors of Bakta performed a single genome (*E. coli*)
+benchmark between Bakta and Prokka, and could show that Bakta had a higher number of proteins with a
+known function at a similar run time.
+ 
+To validate these results on a larger set of genomes and to evaluate the suitability of the Bakta's
+reference databases, I ran Bakta on the 29 MAGs obtained from EMN001 that have been previously
+annotated using Prokka and compared the annotation results with each other.
+
+
+# Results
+
+```{r libraries, echo=F}
+library(knitr)
+library(rmarkdown)
+library(data.table)
+library(tidyverse)
+library(pander)
+library(patchwork)
+opts_chunk$set(echo=F, warning=F, message=F, dpi=150)
+theme_set(theme_classic(base_size = 10))
+```
+
+```{r load_data}
+```
+
+# References
