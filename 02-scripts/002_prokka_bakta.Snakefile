@@ -21,6 +21,7 @@ import os
 
 import numpy as np
 import pandas as pd
+import pyfastx
 
 if not os.path.isdir("snakemake_tmp"):
     os.makedirs("snakemake_tmp")
@@ -104,6 +105,10 @@ rule summarise_prokka:
                 .drop(['source', 'score', 'frame'], axis=1) \
                 .assign(binID=os.path.basename(fn).replace(".gff", "")) \
                 .query('Type != "gene"')
+            orig_contig_names = {prokka[0]: orig[0]
+                                 for prokka, orig in zip(pyfastx.Fasta(fn.replace("gff", "fna"), build_index=False),
+                                                         pyfastx.Fasta(fn.replace("gff", "fasta.gz"), build_index=False))}
+            gff['contig_name'] = [orig_contig_names[c] for c in gff['contig_name'].values]
             gffs.append(gff)
 
         pd.concat(gffs) \
