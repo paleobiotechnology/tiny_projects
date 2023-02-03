@@ -9,6 +9,7 @@ This is a collection of "tiny" projects that arose in discussions among the memb
 ## Overview of the projects
 
   1. [Is fastp suitable for removing adapter sequences?](06-reports/fastp_adapterremoval/fastp_adapterremoval.md)
+  2. [Is Bakta a good replacement for Prokka when annotating metagenome-assembled genomes](06-reports/bakta_vs_prokka/221122_Bakta_vs_Prokka.md)
 
 ## Authors
 
