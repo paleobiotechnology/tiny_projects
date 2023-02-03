@@ -5,21 +5,22 @@ date: "`r format(Sys.time(), '%b %d, %Y')`"
 output:
     github_document:
         fig_width: 8
-        fig_height: 6
+        fig_height: 5
         toc: true
 bibliography: ./221122_Bakta_vs_Prokka.bib
 ---
 
 In the past ten years, there has been a huge increase in the number of metagenome-assembled genomes
-(MAGs) due to improvement in *de novo* assembly tools, such as MEGAHIT [@Li2015] and metaSPAdes
-[@Nurk2017], and the decreasing costs for Illumina short-reads sequencing. Many of the
+(MAGs) due to improvement in *de novo* assembly tools, such as MEGAHIT [@LiMegahit2015] and
+metaSPAdes [@Nurk2017], and the decreasing costs for Illumina short-reads sequencing. Many of the
 pipelines available for *de novo* assembly of short-read sequencing data and subsequent binning of
 the yielded contigs, e.g. nf-core/mag [@Krakau2022] or ATLAS [@Kieser2020], are using the software
-Prokka [@SeemanProkka2014] to rapidly annotate the MAGs. 
+Prokka [@SeemannProkka2014] to rapidly annotate the MAGs. 
 
 Due to its functionality, Prokka has become the de facto standard for this type of bacterial genome
-annotation. However, it has been developed further in the last years and recently the author of
-Prokka, Torsten Seeman, recommended on [Twitter](https://twitter.com/torstenseemann/status/1565471892840259585?s=20&t=SgsPvhR6e09ByVdXs5PIGg)
+annotation. However, it has not been developed further in the last years and recently the author of
+Prokka, Torsten Seeman, recommended on
+[Twitter](https://twitter.com/torstenseemann/status/1565471892840259585?s=20&t=SgsPvhR6e09ByVdXs5PIGg)
 to use Bakta [@Schwengers2021] as a successor of Prokka.
 
 In contrast to Prokka, Bakta aims to increase the ability to assign the newly annotated coding
@@ -32,8 +33,7 @@ To validate these results on a larger set of genomes and to evaluate the suitabi
 reference databases, I ran Bakta on the 29 MAGs obtained from EMN001 that have been previously
 annotated using Prokka and compared the annotation results with each other.
 
-
-# Results
+## Results
 
 ```{r libraries, echo=F}
 library(knitr)
@@ -47,6 +47,278 @@ theme_set(theme_classic(base_size = 10))
 ```
 
 ```{r load_data}
+bakta <- fread("../../05-results/002_Bakta_EMN001_annotations.tsv.gz") |>
+  mutate(binID = as.numeric(str_replace(binID, "EMN001_", "")),
+         contig_id = as.numeric(str_extract(contigID, "[0-9]+")))
+prokka <- fread("../../05-results/002_Prokka_EMN001_annotations.tsv.gz") |>
+  mutate(binID = as.numeric(str_replace(binID, "EMN001-megahit_", "")),
+         contig_id = as.numeric(str_extract(contig_name, "[0-9]+")))
 ```
 
-# References
+### The total number of annotations
+
+In total, metaWRAP produced 29 MAGs that comprised 11,266 contigs. These contigs were provided as
+input to both Bakta and Prokka and we obtained `r format(select(bakta, binID, contig_id) |> distinct() |> nrow(), big.mark = ",")`
+and `r format(select(prokka, binID, contig_id) |> distinct() |> nrow(), big.mark = ",")` contigs 
+with any type of annotations, respectively.
+
+```{r n_annot_p_bin}
+n_annot_p_bin <- left_join(
+  select(bakta, binID, contig_id, Start) |>
+  distinct() |>
+  summarise(Bakta = n(), .by = c(binID)),
+  select(prokka, binID, contig_id, Start) |>
+  distinct() |>
+  summarise(Prokka = n(), .by = c(binID)),
+  by = "binID"
+)
+
+n_annot_p_bin |>
+pivot_longer(-binID, names_to = "method", values_to = "nAnnot") |>
+arrange(binID) %>%
+mutate(binID = factor(binID, levels = unique(.$binID))) |>
+ggplot(aes(x = binID, y = nAnnot)) +
+geom_point(aes(fill = method), colour = "grey30", shape = 21, size = 2.3) +
+labs(x = "EMN001 MAGs",
+     y = "number of annotations",
+     fill = "") +
+theme(legend.position = "top")
+```
+
+**Figure 1**: **Comparison of the total number of annotations per MAG per method.**
+
+Overall, we observed that the number of annotations per MAG were very similar between the two
+methods across all MAGs. There were `r filter(n_annot_p_bin, Bakta > Prokka) %>% nrow()` MAGs for
+which Bakta obtained more annotations, `r filter(n_annot_p_bin, Prokka > Bakta) %>% nrow()` for
+which Prokka obtained more annotations, and `r filter(n_annot_p_bin, Prokka == Bakta) %>% nrow()`
+MAGs with the identical number of annotations. The biggest difference in the
+number of elements annotated was
+`r mutate(n_annot_p_bin, diff = abs(Bakta - Prokka)) %>% filter(diff == max(diff)) %>% pull(diff)`.
+
+However, the type of annotations varied between the two methods (**Table 1**). Next to the types
+that were shared between the methods (CDS, tRNA, tmRNA, rRNA), Bakta additionally provided
+annotations for non-coding RNA (regions), small open reading frames (sorf), origin of replication
+(oriC), and CRISPR.
+
+**Table 1**: **The number of annotations per annotation type.**
+
+```{r types_annot, results = "asis"}
+types_annot <- left_join(
+  select(bakta, binID, contig_id, Start, Type) |>
+  distinct() |>
+  summarise(Bakta = n(), .by = c(binID, Type)) |>
+  mutate(Type = ifelse(Type == "cds", "CDS", Type)), 
+  select(prokka, binID, contig_id, Start, Type) |>
+  distinct() |>
+  summarise(Prokka = n(), .by = c(binID, Type)),
+  by = c("binID", "Type")
+) %>%
+mutate(Prokka = ifelse(is.na(Prokka), 0, Prokka))
+
+types_annot |>
+summarise(Bakta = sum(Bakta),
+          Prokka = sum(Prokka),
+          .by = c(Type)) |>
+arrange(desc(Prokka)) %>%
+pandoc.table(big.mark = ",")
+```
+
+### Annotation of coding sequences
+
+The vast majority of annotations were coding sequences (**Table 1**). These coding sequences are of
+particular interest to the group because they are used as input into different screening tools to
+identify molecule classes, such as antimicrobial peptides, antibiotic resistance genes, or
+biosynthetic gene clusters. Therefore, we combined the annotations of both Bakta and Prokka and
+compared which coding sequences were identified by each program (**Figure 2**).
+
+```{r cds}
+paired_annot <- full_join(
+  select(bakta, binID, contig_id, Start, Strand, Bakta = Type) |>
+  arrange(binID, contig_id, Start),
+  select(prokka, binID, contig_id, Start, Strand, Prokka = Type) |>
+  arrange(binID, contig_id, Start),
+  by = c("binID", "contig_id", "Start", "Strand")
+) |>
+mutate(Bakta = if_else(is.na(Bakta), "missing", Bakta),
+       Bakta = recode(Bakta, `cds` = "CDS"),
+       Prokka = if_else(is.na(Prokka), "missing", Prokka))
+
+annot_cds <- paired_annot |>
+  filter(Bakta == "CDS" | Prokka == "CDS") |>
+  mutate(res = str_c(Bakta, Prokka, sep = "_")) |>
+  summarise(n = n(), .by = c(binID, res)) |>
+  filter(res %in% c("CDS_CDS", "CDS_missing", "missing_CDS")) |>
+  mutate(res = recode(res, `CDS_CDS` = "both",
+                           `CDS_missing` = "only Bakta",
+                           `missing_CDS` = "only Prokka"),
+        binID = factor(binID))
+
+annot_cds_rel <- annot_cds |>
+  mutate(total = sum(n), .by = binID) |>
+  mutate(rel = n / total) 
+
+annot_cds_rel |>
+ggplot(aes(x = binID, y = rel)) +
+geom_col(aes(fill = res), position = position_stack(reverse = T)) +
+labs(x = "MAGs",
+     y = "coding sequence annotations",
+     fill = "identified by") +
+scale_y_continuous(labels = scales::percent_format()) +
+theme(legend.position = "top")
+```
+
+**Figure 2**: **The fraction of annotations for coding sequences (CDS) that were identified by each
+method.**
+
+Across the 29 MAGs, `r format(round(filter(annot_cds_rel, res == "both") |> mutate(rel = rel * 100) |> pull(rel) |> mean() , 1), big.mark = ",")`%
+of the CDS were identified by both methods, while `r format(round(filter(annot_cds_rel, res == "only Bakta") |> mutate(rel = rel * 100) |> pull(rel) |> mean() , 1), big.mark = ",")`%
+and `r format(round(filter(annot_cds_rel, res == "only Prokka") |> mutate(rel = rel * 100) |> pull(rel) |> mean() , 1), big.mark = ",")`%
+were only found by Bakta and Prokka, respectively. When we look further on whether the detected
+coding sequences could be assigned to a known annotations in reference databases, such as COG, GO,
+KEGG, PFAM, RFAM, EC, or RefSeq (**Table 2**).
+
+**Table 2**: **The number of reference annotations for the coding sequences.**
+
+```{r cds_hypo, results = "asis"}
+ref_annot <- paired_annot |>
+  left_join(select(bakta, binID, contig_id, Start, Strand, DbXrefs) |>
+            mutate(Bakta_annot = !is.na(str_extract(DbXrefs, "[A-Za-z0-9]+:"))) |>
+            select(-DbXrefs), by = c("binID", "contig_id", "Start", "Strand")) |>
+  left_join(select(prokka, binID, contig_id, Start, Strand, DbXrefs) |>
+            mutate(Prokka_annot = !str_detect(DbXrefs, "product=hypothetical protein")) |>
+            select(-DbXrefs), by = c("binID", "contig_id", "Start", "Strand")) |>
+  filter((Bakta == "CDS" | Prokka == "CDS"), Bakta != "sorf") |>
+  mutate(detection = str_c(Bakta, Prokka, sep = "_")) |>
+  mutate(detection = recode(detection, `CDS_CDS` = "both",
+                           `CDS_missing` = "only Bakta",
+                           `missing_CDS` = "only Prokka"),
+         ref_annotation = str_c(Bakta_annot, Prokka_annot, sep = "_"),
+         ref_annotation = recode(ref_annotation,
+                                 `TRUE_TRUE` = "both",
+                                 `TRUE_FALSE` = "only Bakta",
+                                 `FALSE_TRUE` = "only Prokka",
+                                 `FALSE_FALSE` = "no ref. annotation"),
+         ref_annotation = case_when(
+                            is.na(Prokka_annot) & Bakta_annot ~ "only Bakta",
+                            is.na(Prokka_annot) & Prokka_annot ~ "only Prokka",
+                            is.na(ref_annotation) ~ "no ref. annotation",
+                            T ~ ref_annotation
+                          ),
+        binID = factor(binID))
+
+ref_annot |>
+group_by(detection, ref_annotation) |>
+count() |>
+pivot_wider(names_from = "ref_annotation", values_from = "n", values_fill = 0) |>
+mutate(`no. of CDS` = rowSums(across(where(is.numeric)))) |>
+select(detection, `no. of CDS`, everything()) |>
+pandoc.table(big.mark = ",")
+```
+
+From the coding sequences that could be detected by either program, more than half of the CDS could
+be assigned to a known annotation in a reference database and only about 20% could not be identified
+by either program. Another 25% could only be linked to a reference by Bakta, while this was only
+true for about 3% of the CDS for Prokka. This superiority of Bakta with respect of being able to link
+CDS to annotations in reference databases was also apparent when looking at the CDS that were only
+detected by one of the two programs. For Prokka, all additionally found CDS were hypothetical
+proteins with no link to a reference annotation. In contrast, Bakta could link more than half of the
+additional CDS to a reference.
+
+### Annotation of RNA sequences
+
+Next to coding sequences, there was also the annotation of RNA sequences that is shared between
+Bakta and Prokka. There were three types of RNA sequences that were detected in both programs:
+tRNAs, tmRNAs, and rRNAs (**Table 1**). Since the detection of tmRNAs did not differ between the
+programs, we will investigate whether there were annotation differences between the other two
+categories. 
+
+```{r rna}
+rna_annot <- paired_annot |>
+  filter(Bakta %in% c("tRNA", "rRNA") |
+         Prokka %in% c("tRNA", "rRNA")) |>
+  mutate(detection = str_c(Bakta, Prokka, sep = "_")) |>
+  summarise(n = n(), .by = c(binID, detection)) 
+
+```
+
+**Table 3**: **Comparison of the overlap of tRNA and rRNA genes between Bakta and Prokka.**
+
+```{r rna_detection_overall, results = "asis"}
+rna_annot |>
+mutate(`RNA type` = ifelse(str_detect(detection, "tRNA"), "tRNA", "rRNA"),
+       detection = recode(detection,
+                         `tRNA_tRNA` = "both",
+                         `tRNA_missing` = "only Bakta",
+                         `missing_tRNA` = "only Prokka",
+                         `rRNA_rRNA` = "both",
+                         `rRNA_missing` = "only Bakta",
+                         `missing_rRNA` = "only Prokka"),
+      binID = factor(binID)) |>
+summarise(n = sum(n), .by = c(detection, `RNA type`)) |>
+pivot_wider(names_from = "detection", values_from = "n") |>
+pandoc.table()
+```
+
+For tRNA genes, half of the annotations were shared between Prokka and Bakta (**Table 3**), but
+there were about 25% of the tRNA annotations that were only found by either program. On closer
+inspection, we could identified that from these tRNA detected only by one program 121 tRNA genes
+were identified to have a match to the annotation from the other program that fell within three
+bases (**Table 4**) This was different for rRNA genes that were almost never shared between the
+programs (**Table 3**) and only a small number of the annotations that were only detected by one
+program fell within close distance of each other (**Table 4**).
+
+**Table 4**: **The number of RNA annotations within less than 10 bp from each other when using Bakta
+and Prokka.**
+
+```{r rna_nearby, results = "asis"}
+full_join(
+  select(bakta, binID, contig_id, Bakta_start = Start, Strand, Bakta = Type) |>
+  arrange(binID, contig_id, Bakta_start),
+  select(prokka, binID, contig_id, Prokka_start = Start, Strand, Prokka = Type) |>
+  arrange(binID, contig_id, Prokka_start),
+  by = c("binID", "contig_id", "Strand"),
+  multiple = "all"
+) |>
+filter(Bakta %in% c("tRNA", "rRNA"),
+       Prokka %in% c("tRNA", "rRNA"),
+       !is.na(Bakta), !is.na(Prokka)) |>
+arrange(binID, contig_id) |>
+mutate(dist = abs(Prokka_start - Bakta_start)) |>
+group_by(binID, contig_id, Strand) |>
+filter(dist == min(dist)) |>
+filter(dist > 0, dist < 10) |>
+group_by(Prokka, dist) |>
+count() |>
+ungroup() |>
+rename(`RNA type` = Prokka,
+       `distance btw. annotation [bp]` = dist) |>
+pivot_wider(names_from = "RNA type", values_from = "n", values_fill = 0) |>
+arrange(`distance btw. annotation [bp]`) |>
+pandoc.table()
+```
+
+## Conclusion
+
+Prokka [@SeemannProkka2014] and Bakta [@Schwengers2021] are two programs that combine a number of
+specialised tools for the annotation of microbial sequences. While both programs rely on the
+prediction of gene sequences by Prodigal [@HyattProdigal2010], the individual tools differ slightly
+between them. Although both programs have a very similar number of predicted genetic elements per
+MAG of EMN001 and many of these elements were detected by both programs, Bakta was able to link to a
+known annotation from a reference database to the predicted sequences more often. All coding
+sequences that were only predicted by Prokka were sequences without any match in the reference
+database, while Bakta detected many sequences that were missed by Prokka for which it also found a
+match in the reference database. The prediction of tRNAs was very comparable between the programs,
+while rRNAs differed strongly.
+
+As the author of Prokka, Torsten Seeman, wrote on Twitter, it seems that Bakta is the future way to
+go. Its main advantage that it is able assign many more genetic elements to reference database and
+report these results in a less convoluted way. Furthermore, the expensive conversion of the results
+from the GFF file format to the GenBank file format, which takes up to a few hours when running
+Prokka on all contigs of a sample, is optional in Bakta and will save a lot of time.
+
+However, Bakta does not seem to be much more sensitive in detecting and annotating a higher number
+of genetic elements compared to Prokka. Therefore, it will be necessary to run additional sequence
+search tools, e.g. based on Hidden Markov Models, with specialised databases to detect all DNA
+sequence classes in the samples.
+ 
+## References
